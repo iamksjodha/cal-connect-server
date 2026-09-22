@@ -45,13 +45,16 @@ def new_session_id() -> str:
 
 def store_pending_flow(session_id: str, state: str, flow: Flow) -> None:
     # A Flow object can't be JSON-serialized directly, so only the pieces needed
-    # to reconstruct an equivalent Flow later are saved (see _rebuild_flow).
+    # to reconstruct an equivalent Flow later are saved. flow.client_config is
+    # already unwrapped (no "web"/"installed" top-level key), but
+    # Flow.from_client_config() requires that wrapper key to be present, so it
+    # has to be re-added here — using client_type, which Flow also exposes.
     with _lock:
         store = _load_store()
         store["pending_flows"][session_id] = {
             "state": state,
             "code_verifier": flow.code_verifier,
-            "client_config": flow.client_config,
+            "client_config": {flow.client_type: flow.client_config},
             "redirect_uri": GOOGLE_OAUTH_REDIRECT_URI,
         }
         _save_store(store)
