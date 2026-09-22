@@ -16,6 +16,12 @@ GOOGLE_OAUTH_REDIRECT_URI = os.getenv(
     "GOOGLE_OAUTH_REDIRECT_URI", "http://localhost:8000/auth/callback"
 )
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500")
+# Comma-separated list of extra allowed CORS origins (e.g. a local dev frontend
+# while testing against a deployed backend). FRONTEND_URL is always included.
+_extra_origins = os.getenv("EXTRA_CORS_ORIGINS", "")
+ALLOWED_ORIGINS = [FRONTEND_URL] + [
+    origin.strip() for origin in _extra_origins.split(",") if origin.strip()
+]
 SESSION_SECRET = os.getenv("SESSION_SECRET", "dev-only-secret-change-me")
 
 IS_HTTPS_DEPLOYMENT = GOOGLE_OAUTH_REDIRECT_URI.startswith("https://")
