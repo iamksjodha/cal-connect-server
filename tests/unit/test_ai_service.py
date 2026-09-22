@@ -91,6 +91,35 @@ def test_list_upcoming_events_tool_call_does_not_populate_action(mock_chat_compl
 
 
 @patch("app.services.ai_service.chat_completion")
+def test_plain_message_works_without_calendar_credentials(mock_chat_completion):
+    mock_chat_completion.return_value = _make_completion(content="Hello! How can I help?")
+
+    result = ai_service.handle_user_message("hi", credentials=None, timezone="Asia/Kolkata")
+
+    assert result["reply"] == "Hello! How can I help?"
+    assert result["action"] is None
+
+
+@patch("app.services.ai_service.calendar_service")
+@patch("app.services.ai_service.chat_completion")
+def test_calendar_tool_call_without_credentials_does_not_raise(mock_chat_completion, mock_calendar_service):
+    tool_call = _make_tool_call("list_upcoming_events", {"days_ahead": 2})
+    first_response = _make_completion(tool_calls=[tool_call])
+    follow_up_response = _make_completion(
+        content="You'll need to connect your Google Calendar first."
+    )
+    mock_chat_completion.side_effect = [first_response, follow_up_response]
+
+    result = ai_service.handle_user_message(
+        "What's on my calendar tomorrow?", credentials=None, timezone="Asia/Kolkata"
+    )
+
+    mock_calendar_service.list_upcoming_events.assert_not_called()
+    assert result["action"] is None
+    assert result["reply"] == "You'll need to connect your Google Calendar first."
+
+
+@patch("app.services.ai_service.chat_completion")
 def test_invalid_timezone_falls_back_to_asia_kolkata(mock_chat_completion):
     mock_chat_completion.return_value = _make_completion(content="ok")
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app.api.dependencies import SESSION_COOKIE, get_session_id
-from app.core.config import FRONTEND_URL
+from app.core.config import FRONTEND_URL, IS_HTTPS_DEPLOYMENT
 from app.integrations import google_oauth
 from app.schemas.auth import AuthStatusResponse
 
@@ -27,7 +27,17 @@ def auth_login(request: Request):
 
     session_id = get_session_id(request) or google_oauth.new_session_id()
     response = RedirectResponse(authorization_url)
-    response.set_cookie(SESSION_COOKIE, session_id, httponly=True, samesite="lax")
+    # The frontend (Netlify) and backend (Render) are different origins in production,
+    # so the session cookie must be sent cross-site: that requires SameSite=None, which
+    # in turn requires Secure (HTTPS-only cookie). Locally both run on http://localhost,
+    # where SameSite=Lax works fine and Secure would block the cookie entirely.
+    response.set_cookie(
+        SESSION_COOKIE,
+        session_id,
+        httponly=True,
+        samesite="none" if IS_HTTPS_DEPLOYMENT else "lax",
+        secure=IS_HTTPS_DEPLOYMENT,
+    )
     # Stash the whole Flow (it holds the PKCE code_verifier) so the callback can reuse it.
     google_oauth.store_pending_flow(session_id, state, flow)
     return response

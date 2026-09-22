@@ -18,10 +18,12 @@ GOOGLE_OAUTH_REDIRECT_URI = os.getenv(
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500")
 SESSION_SECRET = os.getenv("SESSION_SECRET", "dev-only-secret-change-me")
 
+IS_HTTPS_DEPLOYMENT = GOOGLE_OAUTH_REDIRECT_URI.startswith("https://")
+
 # google-auth-oauthlib refuses to exchange tokens over plain http by default.
 # This is a local prototype running on http://localhost, not a public deployment,
 # so the check is safe to relax here (never do this for a real https deployment).
-if GOOGLE_OAUTH_REDIRECT_URI.startswith("http://"):
+if not IS_HTTPS_DEPLOYMENT:
     os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
 
 if not OPENROUTER_API_KEY:

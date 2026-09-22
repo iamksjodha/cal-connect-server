@@ -9,7 +9,7 @@ from app.services import calendar_service
 from app.tools.calendar_tools import SYSTEM_PROMPT, TOOL_SCHEMAS
 
 
-def handle_user_message(user_message: str, credentials: Credentials, timezone: str) -> dict:
+def handle_user_message(user_message: str, credentials: Credentials | None, timezone: str) -> dict:
     try:
         tz = ZoneInfo(timezone)
     except Exception:
@@ -32,7 +32,16 @@ def handle_user_message(user_message: str, credentials: Credentials, timezone: s
         messages.append(choice.message)
 
         for tool_call in tool_calls:
-            if tool_call.function.name == "create_calendar_event":
+            if tool_call.function.name not in ("create_calendar_event", "list_upcoming_events"):
+                tool_output = {"error": f"Unknown tool {tool_call.function.name}"}
+            elif credentials is None:
+                tool_output = {
+                    "error": (
+                        "Google Calendar is not connected. Tell the user they need to "
+                        "connect their calendar first before you can do this."
+                    )
+                }
+            elif tool_call.function.name == "create_calendar_event":
                 args = json.loads(tool_call.function.arguments)
                 action_result = calendar_service.create_event(
                     credentials=credentials,
@@ -43,15 +52,13 @@ def handle_user_message(user_message: str, credentials: Credentials, timezone: s
                     timezone=timezone,
                 )
                 tool_output = action_result
-            elif tool_call.function.name == "list_upcoming_events":
+            else:
                 args = json.loads(tool_call.function.arguments)
                 tool_output = calendar_service.list_upcoming_events(
                     credentials=credentials,
                     timezone=timezone,
                     days_ahead=args.get("days_ahead", 7),
                 )
-            else:
-                tool_output = {"error": f"Unknown tool {tool_call.function.name}"}
 
             messages.append(
                 {

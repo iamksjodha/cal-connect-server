@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 
-from app.api.dependencies import require_calendar_credentials
+from app.api.dependencies import get_calendar_credentials
 from app.core.logging import get_logger
 from app.exceptions import AIServiceError
 from app.schemas.chat import ChatRequest, ChatResponse
@@ -15,7 +15,7 @@ def chat(request: Request, body: ChatRequest):
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="message must not be empty")
 
-    credentials = require_calendar_credentials(request)
+    credentials = get_calendar_credentials(request)
 
     try:
         result = handle_user_message(body.message, credentials, body.timezone)
